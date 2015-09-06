@@ -5,7 +5,7 @@ import BasicPrelude
 import qualified Data.ByteString.Lazy as BS
 import Data.Machine.Runner (runT1)
 import Data.Aeson (encode, parseJSON)
-import Data.Aeson.Types (parseEither)
+import Data.Aeson.Types (Value(Object), parseEither)
 import Data.NonEmpty.Set.Utils
 import Data.TaskWarrior.Problem
 import Data.TaskWarrior.Solution
@@ -15,10 +15,10 @@ import System.IO.Machine
 
 main :: IO ()
 main = do
-  Just affectedTaskV <- runT1 $ parseFrom "stdin" <$> sourceHandle byLine stdin
+  Just affectedTaskV@(Object affectedTaskM) <- runT1 $ parseFrom "stdin" <$> sourceHandle byLine stdin
   let affectedTask = either (error . (("Could not parse stdin: ") ++)) id $ parseEither parseJSON affectedTaskV
       dd = due affectedTask
   problemsWithDependencies <- getDepsProblems dd $ depends affectedTask
   problemsWithDependents <- getDependentsProblems dd $ "depends:" ++ uuidValue (uuid affectedTask)
   let problems = problemsWithDependencies <> problemsWithDependents
-  maybe (BS.putStr $ encode affectedTaskV) (solve dd affectedTaskV) $ nonEmptySet problems
+  maybe (BS.putStr $ encode affectedTaskV) (solve dd affectedTaskM) $ nonEmptySet problems

@@ -5,18 +5,18 @@ module Data.TaskWarrior.Solution where
 import BasicPrelude hiding (insert, lookup, null)
 import Data.Aeson (encode, Value(String, Object))
 import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString.Lazy.Char8 as BS8
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.NonEmpty as NE
 import qualified Data.NonEmpty.Set as NESet
 import Data.NonEmpty.Set.Utils
-import Data.Set (Set, insert, minView, null, singleton)
+import Data.Set (insert)
 import Data.TaskWarrior.Problem
 import Data.TaskWarrior.Task
 import Data.Text (unpack)
 import Data.Text.IO (hPutStrLn)
 import System.Exit
 import System.IO (hGetBuffering, hSetBuffering, BufferMode(NoBuffering), openFile, IOMode(ReadMode), stderr)
-import System.IO.Machine
 import System.Process
 
 data Solution = BringForward (Either DueDate (NESet.T Task))
@@ -33,9 +33,10 @@ describe (BringForward (Right tasks))
   = "Bring forward these tasks' due date: " ++ show (description <$> NESet.toAscList tasks)
 describe (PutBack (Right tasks))
   = "Put back these tasks' due date: " ++ show (description <$> NESet.toAscList tasks)
+describe Abort = "Abort current TaskWarrior command"
 
 describeAll :: NESet.T Solution -> Text
-describeAll solutions = unlines . NE.toList $ describeFully <$> NESet.toAscList solutions
+describeAll solns = unlines . NE.toList $ describeFully <$> NESet.toAscList solns
   where
     describeFully solution = describe solution ++ " (" ++ show (key solution) ++ ")"
 
@@ -70,13 +71,14 @@ askUserIfAppropriate s = maybe askUser return $ soleMember s
 
 -- | Changes the due date of the current task
 changeCurrentDueDate :: DueDate -> HashMap Text Value -> IO ()
-changeCurrentDueDate dd m =
-  BS.putStr . encode . Object $ HashMap.insert "due" (String $ show dd) m
+changeCurrentDueDate dd m = do
+  BS8.putStrLn . encode . Object $ HashMap.insert "due" (String $ show dd) m
+  putStrLn "Successfully changed due date of current task"
 
 -- | Leave the current task unchanged and change the due date of some other task(s)
-changeOtherDueDates :: DueDate -> NESet.T Task -> Value -> IO ()
-changeOtherDueDates dd tasks v = do
-  BS.putStr $ encode v
+changeOtherDueDates :: DueDate -> NESet.T Task -> HashMap Text Value -> IO ()
+changeOtherDueDates dd tasks m = do
+  BS.putStr . encode $ Object m
   callProcess "task" [intercalate "," . map (unpack . uuidValue . uuid) . NE.toList $ NESet.toAscList tasks, "modify", "due:" ++ maybe "" (unpack . show) (dueDate dd)]
 
 callProcess :: String -> [String] -> IO ()
@@ -84,19 +86,22 @@ callProcess cmd args = do
     exitCode <- system . intercalate " " $ cmd : args
     case exitCode of
       ExitSuccess   -> return ()
-      ExitFailure r -> fail "Process failed"
+      ExitFailure _ -> fail "Process failed"
 
-carryOut :: Solution -> Value -> DueDate -> IO ()
-carryOut Abort _ _ = fail "Aborting"
-carryOut (BringForward (Left dd)) (Object m) _ = changeCurrentDueDate dd m
-carryOut (PutBack (Left dd)) (Object m) _ = changeCurrentDueDate dd m
-carryOut (BringForward (Right tasks)) v dd = changeOtherDueDates dd tasks v
-carryOut (PutBack (Right tasks)) v dd = changeOtherDueDates dd tasks v
+carryOut :: Solution -> HashMap Text Value -> DueDate -> IO ()
+carryOut Abort _ _ = do
+  putStrLn "{}"
+  putStrLn "tw-propagate-due aborted"
+  fail "Aborting"
+carryOut (BringForward (Left dd)) m _ = changeCurrentDueDate dd m
+carryOut (PutBack (Left dd)) m _ = changeCurrentDueDate dd m
+carryOut (BringForward (Right tasks)) m dd = changeOtherDueDates dd tasks m
+carryOut (PutBack (Right tasks)) m dd = changeOtherDueDates dd tasks m
 
-solve :: DueDate -> Value -> NESet.T Problem -> IO ()
-solve dd affectedTaskV problems = do
+solve :: DueDate -> HashMap Text Value -> NESet.T Problem -> IO ()
+solve dd m problems = do
   hPutStrLn stderr $ "The following problem(s) were encountered:"
   hPutStrLn stderr $ explainAll problems
   let candidateSolutions = solutions problems
   chosenSolution <- askUserIfAppropriate candidateSolutions
-  carryOut chosenSolution affectedTaskV dd
+  carryOut chosenSolution m dd

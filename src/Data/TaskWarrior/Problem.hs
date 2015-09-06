@@ -24,7 +24,7 @@ explain :: Problem -> Text
 explain (DependenciesDueTooLate tasks) = 
   "These dependencies of this task are due after this task is: " ++ show (NESet.toAscList tasks)
 explain (DependentsDueTooSoon tasks) =
-  "These dependendents of this task are due before this task is: " ++ show (NESet.toAscList tasks)
+  "These dependents of this task are due before this task is: " ++ show (NESet.toAscList tasks)
 
 explainAll :: NESet.T Problem -> Text
 explainAll problems = unlines . NE.toList $ explain <$> NESet.toAscList problems
