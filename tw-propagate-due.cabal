@@ -4,10 +4,12 @@ cabal-version: >= 1.10
 build-type: Simple
 license: BSD3
 stability: stable
-synopsis: Hook script for TaskWarrior to propagate due dates to dependencies
+synopsis: Hook script for TaskWarrior to propagate due dates to/from dependencies
 description: TaskWarrior allows you to make task A a dependency of task B even when
              task B's due date is after task A's, or when task B does not have a due
-             date but task A does.
+             date but task A does. This hook script prevents such nonsensical
+             situations, and tries to help you fix them. TODO: Support other
+             constraints, such as "for all tasks, wait date < due date, if both exist".
 category: Data
 author: Robin Green <greenrd@greenrd.org>
 data-dir: ""
@@ -16,12 +18,20 @@ executable tw-propagate-due
                    base >=4.2 && <5,
                    basic-prelude >= 0.3 && <0.4,
                    bytestring >= 0.10 && <0.11,
+                   containers >= 0.5 && <0.6,
                    machines >= 0.5 && <0.6,
                    machines-io >=0.2 && <0.3,
+                   non-empty >=0.2 && <0.3,
                    aeson >=0.7 && <0.8,
                    unordered-containers >=0.2 && <0.3,
-                   text >= 1.2 && <1.3
+                   text >= 1.2 && <1.3,
+                   process >= 1.1 && <1.2
     main-is: hook.hs
+    other-modules:
+                  Data.NonEmpty.Set.Utils,
+                  Data.TaskWarrior.Problem,
+                  Data.TaskWarrior.Solution,
+                  Data.TaskWarrior.Task
     buildable: True
     hs-source-dirs: src
     default-language: Haskell2010
