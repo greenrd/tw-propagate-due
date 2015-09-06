@@ -1,9 +1,9 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, OverloadedStrings #-}
 module Data.TaskWarrior.Task where
 
 import BasicPrelude hiding (show)
 import Data.Aeson
-import Data.Aeson.TH
+import Data.Aeson.Types (typeMismatch)
 import Prelude (Show(..))
 
 -- | No need to parse - only ordering is required
@@ -37,5 +37,7 @@ data Task = Task { due         :: DueDate
                  , uuid        :: UUID
                  } deriving (Eq, Ord, Show)
 
-$(deriveFromJSON defaultOptions ''Task)
-
+instance FromJSON Task where
+  parseJSON (Object m) = 
+    Task <$> m .:? "due" .!= DueDate Nothing <*> m .: "description" <*> m .:? "depends" <*> m .: "uuid"
+  parseJSON v = typeMismatch "Object" v
