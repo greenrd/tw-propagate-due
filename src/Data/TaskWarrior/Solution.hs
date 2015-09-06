@@ -16,7 +16,7 @@ import Data.TaskWarrior.Task
 import Data.Text (unpack)
 import Data.Text.IO (hPutStrLn)
 import System.Exit
-import System.IO (hGetBuffering, hSetBuffering, BufferMode(NoBuffering), openFile, IOMode(ReadMode), stderr)
+import System.IO (hGetBuffering, hGetChar, hSetBuffering, BufferMode(NoBuffering), openFile, IOMode(ReadMode), stderr)
 import System.Process
 
 data Solution = BringForward (Either DueDate (NESet.T Task))
@@ -65,7 +65,7 @@ askUserIfAppropriate s = maybe askUser return $ soleMember s
       hPutStrLn stderr $ describeAll s
       buffMode <- hGetBuffering terminal
       hSetBuffering terminal NoBuffering
-      solutionChar <- getChar
+      solutionChar <- hGetChar terminal
       hSetBuffering terminal buffMode
       return . fromMaybe Abort . find ((solutionChar ==) . key) . NE.toList $ NESet.toAscList s
 
