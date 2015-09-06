@@ -90,7 +90,6 @@ callProcess cmd args = do
 
 carryOut :: Solution -> HashMap Text Value -> DueDate -> IO ()
 carryOut Abort _ _ = do
-  putStrLn "{}"
   putStrLn "tw-propagate-due aborted"
   fail "Aborting"
 carryOut (BringForward (Left dd)) m _ = changeCurrentDueDate dd m

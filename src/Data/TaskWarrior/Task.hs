@@ -4,10 +4,14 @@ module Data.TaskWarrior.Task where
 import BasicPrelude hiding (show)
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
+import Data.Text (unpack)
 import Prelude (Show(..))
 
 -- | No need to parse - only ordering is required
-newtype Date = Date Text deriving (Eq, Ord, Show, FromJSON)
+newtype Date = Date Text deriving (Eq, Ord, FromJSON)
+
+instance Show Date where
+  show (Date d) = unpack d
 
 newtype DueDate = DueDate { dueDate :: Maybe Date } deriving (Eq, FromJSON)
 
