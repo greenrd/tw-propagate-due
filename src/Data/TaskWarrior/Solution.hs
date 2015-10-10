@@ -14,7 +14,7 @@ import Data.Set (insert)
 import Data.TaskWarrior.Problem
 import Data.TaskWarrior.Task
 import Data.Text (unpack)
-import Data.Text.IO (hPutStrLn)
+import Data.Text.IO (hPutStr, hPutStrLn)
 import System.Exit
 import System.IO (hGetBuffering, hGetChar, hSetBuffering, BufferMode(NoBuffering), openFile, IOMode(ReadMode), stderr)
 import System.Process
@@ -61,12 +61,15 @@ askUserIfAppropriate s = maybe askUser return $ soleMember s
     askUser :: IO Solution
     askUser = do
       terminal <- openFile "/dev/tty" ReadMode
-      hPutStrLn stderr $ "The following solutions are available:"
+      hPutStrLn stderr "The following solutions are available:"
       hPutStrLn stderr $ describeAll s
+      hPutStr stderr "Choose a solution by pressing the associated key: "
       buffMode <- hGetBuffering terminal
       hSetBuffering terminal NoBuffering
       solutionChar <- hGetChar terminal
       hSetBuffering terminal buffMode
+      hPutStrLn stderr ""
+      hPutStrLn stderr ""
       return . fromMaybe Abort . find ((solutionChar ==) . key) . NE.toList $ NESet.toAscList s
 
 -- | Changes the due date of the current task
