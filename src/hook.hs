@@ -17,9 +17,14 @@ import System.IO.Machine
 main :: IO ()
 main = do
   Last (Just affectedTaskV@(Object affectedTaskM)) <- foldMapT Last $ parseFrom "stdin" <$> sourceHandle byLine stdin
+  args <- getArgs
   let affectedTask = either (error . (("Could not parse stdin: ") ++)) id $ parseEither parseJSON affectedTaskV
       dd = due affectedTask
-  problemsWithDependencies <- getDepsProblems dd $ depends affectedTask
-  problemsWithDependents <- getDependentsProblems dd $ "depends:" ++ uuidValue (uuid affectedTask)
-  let problems = problemsWithDependencies <> problemsWithDependents
-  maybe (BS.putStr $ encode affectedTaskV) (solve dd affectedTaskM) $ nonEmptySet problems
+      problems :: [Text] -> a -> IO (Set Problem)
+      problems hookArgs affectedTaskV | "command:export" `elem` hookArgs = return mempty
+                                      | otherwise = do
+        problemsWithDependencies <- getDepsProblems dd $ depends affectedTask
+        problemsWithDependents <- getDependentsProblems dd $ "depends:" ++ uuidValue (uuid affectedTask)
+        return $ problemsWithDependencies <> problemsWithDependents
+  ps <- problems args affectedTaskV
+  maybe (BS.putStr $ encode affectedTaskV) (solve dd affectedTaskM) $ nonEmptySet ps
