@@ -81,13 +81,6 @@ changeOtherDueDates dd tasks m = do
   BS.putStr . encode $ Object m
   callProcess "task" [intercalate "," . map (unpack . uuidValue . uuid) . NE.toList $ NESet.toAscList tasks, "modify", "due:" ++ maybe "" (unpack . show) (dueDate dd)]
 
-callProcess :: String -> [String] -> IO ()
-callProcess cmd args = do
-    exitCode <- system . intercalate " " $ cmd : args
-    case exitCode of
-      ExitSuccess   -> return ()
-      ExitFailure _ -> fail "Process failed"
-
 carryOut :: Solution -> HashMap Text Value -> DueDate -> IO ()
 carryOut Abort _ _ = do
   putStrLn "tw-propagate-due aborted"
